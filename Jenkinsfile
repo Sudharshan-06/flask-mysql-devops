@@ -54,6 +54,18 @@ pipeline {
                 sh 'docker push $IMAGE_NAME:latest'
             }
         }
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh 'kubectl apply -f k8s/'
+            }
+        }
+
+        stage('Restart Deployment') {
+            steps {
+                sh 'kubectl rollout restart deployment/flask-app'
+                sh 'kubectl rollout status deployment/flask-app'
+            }
+        }
     }
 
     post {
