@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = "sudharshannnn/flask-mysql-devops"
+    }
+
     stages {
 
         stage('Checkout') {
@@ -11,7 +15,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t flask-mysql-devops:latest ./app'
+                sh 'docker build -t $IMAGE_NAME:latest ./app'
             }
         }
 
@@ -19,7 +23,7 @@ pipeline {
             steps {
                 sh '''
                 docker rm -f flask-test || true
-                docker run -d --name flask-test -p 5000:5000 flask-mysql-devops:latest
+                docker run -d --name flask-test -p 5000:5000 $IMAGE_NAME:latest
                 sleep 10
                 '''
             }
@@ -27,7 +31,7 @@ pipeline {
 
         stage('Health Check') {
             steps {
-                sh 'curl http://localhost:5000 || exit 1'
+                sh 'curl http://localhost:5000'
             }
         }
 
@@ -35,6 +39,26 @@ pipeline {
             steps {
                 sh 'docker rm -f flask-test || true'
             }
+        }
+
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh 'echo $PASSWORD | docker login -u $USERNAME --password-stdin'
+                }
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sh 'docker push $IMAGE_NAME:latest'
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker logout || true'
         }
     }
 }
